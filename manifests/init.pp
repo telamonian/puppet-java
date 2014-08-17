@@ -35,14 +35,37 @@ class java (
 	    mode    => '0755',
 	    require => Package['java']
 	  }
+	  
+	  # Allow 'large' keys locally.
+    # http://www.ngs.ac.uk/tools/jcepolicyfiles
+    
+    file { $sec_dir:
+      ensure  => 'directory',
+      owner   => 'root',
+      group   => 'wheel',
+      mode    => '0775',
+      require => Package['java']
+    }
+  
+    file { "${sec_dir}/local_policy.jar":
+      source  => 'puppet:///modules/java/local_policy.jar',
+      owner   => 'root',
+      group   => 'wheel',
+      mode    => '0664',
+      require => File[$sec_dir]
+    }
+  
+    file { "${sec_dir}/US_export_policy.jar":
+      source  => 'puppet:///modules/java/US_export_policy.jar',
+      owner   => 'root',
+      group   => 'wheel',
+      mode    => '0664',
+      require => File[$sec_dir]
+    }
 	}
   elsif $osfamily=='Debian' {
     include apt
-#    if defined(Exec["apt_update"]) {
-#      Exec["apt_update"] {  
-#        user => 'root',
-#      }
-#    }
+
     # expletive-deleted Puppet. The default Exec{} and Package{} settings in boxen/manifests/site.pp screw up the exec{} and package{} declarations in the Puppetlabs-apt module
     # the following resource collectors are a workaround. Resource Collectors: the cause of, and solution to, all of my problems
     Exec <| title == "apt_update" |> { 
@@ -51,46 +74,20 @@ class java (
     Package <| title == "software-properties-common" |> { 
       provider => apt,
     }
-#    package {
-#      "software-properties-common":
-#        provider => apt,
-#    }
+
     file { '/tmp/oracle-java7-installer.seeds':
       source => 'puppet:///modules/java/oracle-java7-installer.seeds',
       mode   => '0600',
       backup => false,
     }
-#    apt::Package {
-#		  provider => apt
-#    }
-#    ->
-#    Package {
-#      provider => apt
-#    }
-#    ->
+
     apt::ppa { 'ppa:webupd8team/java': }
-#    ->
-#    Package {
-#      provider => homebrew
-#    }
-#    sudoers { 
-#      'ppa_java':
-#        users    => $::boxen_user,
-#        hosts    => 'ALL',
-#        commands => [
-#          '(ALL) NOPASSWD : add-apt-repository ppa:webupd8team/java',
-#          '/usr/bin/apt-get update'
-#        ],
-#        type     => 'user_spec',
-#    }
+
     apt::hold { 
       'oracle-java7-installer':
 		    version => "7u${update_version}*",
 		}
-#		exec {
-#		  "apt-get update":
-#        command => "/usr/bin/apt-get update"
-#    }
+
     package { 
       "oracle-java7-installer":
 			  alias        => 'java',
@@ -100,39 +97,9 @@ class java (
                           File['/tmp/oracle-java7-installer.seeds']
                         ],
 			  responsefile => '/tmp/oracle-java7-installer.seeds'
-
-#			  require  => Sudoers['ppa_java'],
-#			  require  => Exec['apt-get update'],
     }
   }
   else {
     fail("the java module only has support for OSX and Debian variants right now")
   }
-
-  # Allow 'large' keys locally.
-  # http://www.ngs.ac.uk/tools/jcepolicyfiles
-
-#  file { $sec_dir:
-#    ensure  => 'directory',
-#    owner   => 'root',
-#    group   => 'wheel',
-#    mode    => '0775',
-#    require => Package['java']
-#  }
-#
-#  file { "${sec_dir}/local_policy.jar":
-#    source  => 'puppet:///modules/java/local_policy.jar',
-#    owner   => 'root',
-#    group   => 'wheel',
-#    mode    => '0664',
-#    require => File[$sec_dir]
-#  }
-#
-#  file { "${sec_dir}/US_export_policy.jar":
-#    source  => 'puppet:///modules/java/US_export_policy.jar',
-#    owner   => 'root',
-#    group   => 'wheel',
-#    mode    => '0664',
-#    require => File[$sec_dir]
-#  }
 }
